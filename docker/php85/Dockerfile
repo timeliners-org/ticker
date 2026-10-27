@@ -1,114 +1,85 @@
-# Stage 1: Build environment and Composer dependencies
-FROM php:8.5-fpm AS builder
+# PHP-Basis mit Erweiterungen
+FROM php:8.5-apache AS php-base
 
-# Install system dependencies and PHP extensions for Laravel with MySQL/PostgreSQL support.
-# Dependencies in this stage are only required for building the final image.
-# Node.js and asset building are handled in the Nginx stage, not here.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    unzip \
-    libpq-dev \
-    libonig-dev \
-    libssl-dev \
-    libxml2-dev \
-    libcurl4-openssl-dev \
-    libicu-dev \
-    libzip-dev \
-    && docker-php-ext-install -j$(nproc) \
-    pdo_mysql \
-    pdo_pgsql \
-    pgsql \
-    intl \
-    zip \
-    bcmath \
-    soap \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
-# Set the working directory inside the container
-WORKDIR /var/www
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        git \
+        unzip \
+        libpq-dev \
+        libicu-dev \
+        libzip-dev \
+    && docker-php-ext-install \
+        bcmath \
+        intl \
+        pdo_pgsql \
+        zip \
+    && a2enmod rewrite headers \
+    && sed -ri \
+        -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+        /etc/apache2/sites-available/000-default.conf \
+    && sed -ri \
+        -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
+        /etc/apache2/apache2.conf \
+    && printf '<Directory ${APACHE_DOCUMENT_ROOT}>\n    AllowOverride All\n</Directory>\n' \
+        > /etc/apache2/conf-available/laravel.conf \
+    && a2enconf laravel \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the entire Laravel application code into the container
-# -----------------------------------------------------------
-# In Laravel, `composer install` may trigger scripts
-# needing access to application code.
-# For example, the `post-autoload-dump` event might execute
-# Artisan commands like `php artisan package:discover`. If the
-# application code (including the `artisan` file) is not
-# present, these commands will fail, leading to build errors.
-#
-# By copying the entire application code before running
-# `composer install`, we ensure that all necessary files are
-# available, allowing these scripts to run successfully.
-# In other cases, it would be possible to copy composer files
-# first, to leverage Docker's layer caching mechanism.
-# -----------------------------------------------------------
-COPY . /var/www
 
-# Install Composer and dependencies
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+# Build-Umgebung: PHP, Composer und Node
+FROM php-base AS build
 
-# Stage 2: Production environment
-FROM php:8.5-fpm AS production
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-# Install only runtime libraries needed in production
-# libfcgi-bin and procps are required for the php-fpm-healthcheck script
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev \
-    libicu-dev \
-    libzip-dev \
-    libfcgi-bin \
-    procps \
-    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource_setup.sh \
+    && bash /tmp/nodesource_setup.sh \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* /tmp/nodesource_setup.sh
 
-# Download and install php-fpm health check script
-RUN curl -o /usr/local/bin/php-fpm-healthcheck \
-    https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
-    && chmod +x /usr/local/bin/php-fpm-healthcheck
+WORKDIR /app
 
-# Copy the initialization script
-COPY ./docker/php-fpm/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY composer.json composer.lock ./
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
+    --no-scripts \
+    --optimize-autoloader
 
-# Copy the initial storage structure
-COPY ./storage /var/www/storage-init
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Copy PHP extensions and libraries from the builder stage
-COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
-COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
-COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
+COPY . .
 
-# Use the recommended production PHP configuration
-# -----------------------------------------------------------
-# PHP provides development and production configurations.
-# Here, we replace the default php.ini with the production
-# version to apply settings optimized for performance and
-# security in a live environment.
-# -----------------------------------------------------------
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+RUN rm -f bootstrap/cache/packages.php \
+          bootstrap/cache/services.php \
+    && php artisan package:discover --ansi
 
-# Keep the image-provided FPM global config intact and add pool overrides separately
-COPY ./docker/common/php-fpm/conf.d/*.conf /usr/local/etc/php-fpm.d/
-# Update the variables_order to include E (for ENV)
-#RUN sed -i 's/variables_order = "GPCS"/variables_order = "EGPCS"/' "$PHP_INI_DIR/php.ini"
+# Wayfinder benötigt PHP und das installierte vendor-Verzeichnis.
+RUN php artisan wayfinder:generate --with-form
 
-# Copy the application code and dependencies from the build stage
-COPY --from=builder /var/www /var/www
+RUN npm run build
 
-# Set working directory
-WORKDIR /var/www
 
-# Ensure correct permissions
-RUN chown -R www-data:www-data /var/www
+# Produktionsimage: kein Node und kein Composer
+FROM php-base AS production
 
-# Switch to the non-privileged user to run the application
-USER www-data
+WORKDIR /var/www/html
 
-# Change the default command to run the entrypoint script
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+COPY . .
+COPY --from=build /app/vendor ./vendor
+COPY --from=build /app/public/build ./public/build
 
-# Expose port 9000 and start php-fpm server
-EXPOSE 9000
-CMD ["php-fpm"]
+RUN rm -f bootstrap/cache/packages.php \
+          bootstrap/cache/services.php \
+    && php artisan package:discover --ansi \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]
