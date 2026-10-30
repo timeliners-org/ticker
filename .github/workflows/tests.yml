@@ -50,6 +50,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup pnpm
+        run: npm install -g pnpm
+
       - name: Setup Application
         run: composer setup
 
