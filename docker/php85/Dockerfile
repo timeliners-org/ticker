@@ -38,7 +38,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource_setup.sh
     && bash /tmp/nodesource_setup.sh \
     && apt-get update \
     && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/* /tmp/nodesource_setup.sh
+    && rm -rf /var/lib/apt/lists/* /tmp/nodesource_setup.sh \
+    && npm install -g pnpm
 
 WORKDIR /app
 
@@ -51,8 +52,8 @@ RUN composer install \
     --no-scripts \
     --optimize-autoloader
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -63,7 +64,7 @@ RUN rm -f bootstrap/cache/packages.php \
 # Wayfinder benötigt PHP und das installierte vendor-Verzeichnis.
 RUN php artisan wayfinder:generate --with-form
 
-RUN npm run build
+RUN pnpm run build
 
 
 # Produktionsimage: kein Node und kein Composer
