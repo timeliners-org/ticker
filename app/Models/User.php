@@ -17,6 +17,9 @@ use Illuminate\Support\Carbon;
  * @property string $email
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read TeamMember[] $memberships
+ * @property-read Team[] $teams
+ * @property-read Shift[] $shifts
  */
 #[Fillable(['name', 'email', 'sub'])]
 class User extends Authenticatable
@@ -34,5 +37,11 @@ class User extends Authenticatable
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'team_members', 'user_id', 'team_id');
+    }
+
+    /** @return HasMany<Shift, $this> */
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(Shift::class, 'user_id');
     }
 }
