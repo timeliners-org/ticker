@@ -21,4 +21,14 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+
+    public function memberships()
+    {
+        return $this->hasMany(TeamMember::class, 'user_id');
+    }
+
+    public function teams()
+    {
+        return $this->belongsToMany(Team::class, 'team_members', 'user_id', 'team_id');
+    }
 }
