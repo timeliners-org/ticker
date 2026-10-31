@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Team extends Model
 {
@@ -15,12 +16,14 @@ class Team extends Model
         'name',
     ];
 
-    public function members()
+    /** @return HasMany<TeamMember, $this> */
+    public function members(): HasMany
     {
         return $this->hasMany(TeamMember::class, 'team_id');
     }
 
-    public function shiftCategories()
+    /** @return HasMany<ShiftCategory, $this> */
+    public function shiftCategories(): HasMany
     {
         return $this->hasMany(ShiftCategory::class, 'owner_id');
     }
