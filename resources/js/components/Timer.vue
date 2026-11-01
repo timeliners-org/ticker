@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { router } from "@inertiajs/vue3";
-import { Check, Pause, Play, Square } from "@lucide/vue";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import { router } from '@inertiajs/vue3';
+import { Check, Pause, Play, Square } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Button } from '@/components/ui/button';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { pause, start, stop, unpause, update } from "@/routes/timer";
-import type { Timer } from "@/types/timer";
-import TimerReaction from "@/components/TimerReaction.vue";
+} from '@/components/ui/select';
+import { pause, start, stop, unpause, update } from '@/routes/timer';
+import type { Timer } from '@/types/timer';
+import TimerReaction from '@/components/TimerReaction.vue';
 
 const props = defineProps<{
     timer: Timer;
@@ -50,7 +50,7 @@ onBeforeUnmount(() => clearInterval(interval));
 
 const display = computed(() => {
     if (!status.value) {
-        return "00:00";
+        return '00:00';
     }
 
     // While paused, show how long the break has lasted
@@ -58,15 +58,15 @@ const display = computed(() => {
         status.value.pausedAt ?? status.value.startedAt,
     ).getTime();
     const minutes = Math.max(0, Math.floor((now.value - from) / 60000));
-    const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
-    const mm = String(minutes % 60).padStart(2, "0");
+    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const mm = String(minutes % 60).padStart(2, '0');
 
     return `${hh}:${mm}`;
 });
 
 const sessionDisplay = computed(() => {
     if (!status.value) {
-        return "00:00";
+        return '00:00';
     }
 
     const minutes = Math.max(
@@ -76,7 +76,7 @@ const sessionDisplay = computed(() => {
         ),
     );
 
-    return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 });
 
 const sessionTooltip = computed(() => {
@@ -85,15 +85,16 @@ const sessionTooltip = computed(() => {
     }
 
     const created = new Date(status.value.createdAt);
-    const sameDay = created.toDateString() === new Date(now.value).toDateString();
-    const time = created.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
+    const sameDay =
+        created.toDateString() === new Date(now.value).toDateString();
+    const time = created.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
     });
 
     return sameDay
         ? `Session since ${time}`
-        : `Session since ${created.toLocaleDateString("en-GB")}, ${time}`;
+        : `Session since ${created.toLocaleDateString('en-GB')}, ${time}`;
 });
 
 const activeCategory = computed(() =>
@@ -104,8 +105,7 @@ const activeCategory = computed(() =>
 
 const seconds = computed(() =>
     Math.floor(
-        ((now.value - new Date(status.value?.startedAt ?? 0).getTime()) /
-            1000),
+        (now.value - new Date(status.value?.startedAt ?? 0).getTime()) / 1000,
     ),
 );
 
@@ -169,7 +169,10 @@ const selectedValue = computed({
                 </template>
                 <span v-else>No active shift</span>
             </span>
-            <span class="shrink-0 font-mono tabular-nums" :title="sessionTooltip">
+            <span
+                class="shrink-0 font-mono tabular-nums"
+                :title="sessionTooltip"
+            >
                 {{ sessionDisplay }}
             </span>
         </div>

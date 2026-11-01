@@ -51,7 +51,10 @@ class Dashboard extends Controller
             ->whereHas('category', fn ($query) => $query->whereNotNull('owner_id'))
             ->where('start_time', '>=', now()->startOfDay())
             ->get()
-            ->reduce(fn (int $sum, $shift) => $sum + $shift->start_time->diffInSeconds($shift->end_time, true), 0);
+            ->reduce(
+                fn (float $sum, Shift $shift): float => $sum + (float) $shift->start_time->diffInSeconds($shift->end_time, true),
+                0.0,
+            );
 
         return Inertia::render('Dashboard', [
             'shifts' => $shifts,

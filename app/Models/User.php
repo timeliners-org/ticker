@@ -51,4 +51,11 @@ class User extends Authenticatable
     {
         return $this->hasManyThrough(ShiftCategory::class, Shift::class, 'user_id', 'id', 'id', 'shift_category_id');
     }
+
+    public function isAdminOf(Team $team): bool
+    {
+        $membership = $this->memberships()->where('team_id', $team->id)->first();
+
+        return $membership ? (bool) $membership->is_admin : false;
+    }
 }

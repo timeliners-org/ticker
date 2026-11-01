@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Link, usePage } from "@inertiajs/vue3";
-import { BookOpen, FolderGit2, LayoutGrid } from "@lucide/vue";
-import AppLogo from "@/components/AppLogo.vue";
-import NavFooter from "@/components/NavFooter.vue";
-import NavMain from "@/components/NavMain.vue";
-import NavUser from "@/components/NavUser.vue";
-import TimerWrapper from "@/components/TimerWrapper.vue";
+import { Link, usePage } from '@inertiajs/vue3';
+import { LayoutGrid, UsersRound } from '@lucide/vue';
+import AppLogo from '@/components/AppLogo.vue';
+import NavFooter from '@/components/NavFooter.vue';
+import NavMain from '@/components/NavMain.vue';
+import NavUser from '@/components/NavUser.vue';
+import TimerWrapper from '@/components/TimerWrapper.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -14,16 +14,22 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { dashboard } from "@/routes";
-import type { NavItem } from "@/types";
-import { computed } from "vue";
+} from '@/components/ui/sidebar';
+import { dashboard } from '@/routes';
+import type { NavItem } from '@/types';
+import { computed } from 'vue';
+import teams from '@/routes/teams';
 
 const mainNavItems: NavItem[] = [
     {
-        title: "Dashboard",
+        title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Teams',
+        href: teams.index(),
+        icon: UsersRound,
     },
 ];
 

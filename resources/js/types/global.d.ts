@@ -26,7 +26,7 @@ declare module '@inertiajs/core' {
             timer: {
                 status: TimerStatus | null;
                 categories: ShiftCategory[] | null;
-            }
+            };
             [key: string]: unknown;
         };
     }

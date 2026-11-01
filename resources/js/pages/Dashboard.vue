@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { Head, usePage } from "@inertiajs/vue3";
-import PlaceholderPattern from "@/components/PlaceholderPattern.vue";
-import { dashboard } from "@/routes";
-import { Clock } from "@lucide/vue";
-import { computed, onMounted, onUnmounted, ref } from "vue";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { VisAxis, VisStackedBar, VisXYContainer } from "@unovis/vue";
+import { Head, usePage } from '@inertiajs/vue3';
+import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import { dashboard } from '@/routes';
+import { Clock } from '@lucide/vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { VisAxis, VisStackedBar, VisXYContainer } from '@unovis/vue';
 import {
     ChartContainer,
     ChartCrosshair,
     ChartTooltip,
     ChartTooltipContent,
     componentToString,
-} from "@/components/ui/chart";
-import type { ChartConfig } from "@/components/ui/chart";
-import type { DashboardShifts } from "@/types";
+} from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
+import type { DashboardShifts } from '@/types';
 
 const props = defineProps<{
     shifts: DashboardShifts;
@@ -81,7 +81,7 @@ const colors = computed(() =>
 const formatHours = (hours: number) => {
     const totalMinutes = Math.round(hours * 60);
     const h = Math.floor(totalMinutes / 60);
-    const m = String(totalMinutes % 60).padStart(2, "0");
+    const m = String(totalMinutes % 60).padStart(2, '0');
     return `${h}:${m}`;
 };
 // Reactive clock so the display keeps updating while the timer runs.
@@ -109,14 +109,14 @@ const todayWorkingTimeDisplay = computed(() => {
 });
 const formatDay = (tick: number | Date) => {
     const row = chartData.value[Math.round(Number(tick))];
-    return row ? String(row.date) : "";
+    return row ? String(row.date) : '';
 };
 
 defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: "Dashboard",
+                title: 'Dashboard',
                 href: dashboard(),
             },
         ],

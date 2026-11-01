@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ShiftCategory;
 use App\Services\TimerService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class TimerController extends Controller
@@ -12,7 +13,7 @@ class TimerController extends Controller
         protected TimerService $timerService,
     ) {}
 
-    public function start(Request $request, ShiftCategory $category)
+    public function start(Request $request, ShiftCategory $category): RedirectResponse
     {
         $user = $request->user();
 
@@ -21,7 +22,7 @@ class TimerController extends Controller
         return back();
     }
 
-    public function stop(Request $request)
+    public function stop(Request $request): RedirectResponse
     {
         $user = $request->user();
 
@@ -30,7 +31,7 @@ class TimerController extends Controller
         return back();
     }
 
-    public function unpause(Request $request, ?ShiftCategory $category)
+    public function unpause(Request $request, ?ShiftCategory $category): RedirectResponse
     {
         $user = $request->user();
 
@@ -39,7 +40,7 @@ class TimerController extends Controller
         return back();
     }
 
-    public function pause(Request $request)
+    public function pause(Request $request): RedirectResponse
     {
         $user = $request->user();
 
@@ -48,7 +49,7 @@ class TimerController extends Controller
         return back();
     }
 
-    public function update(Request $request, ShiftCategory $category)
+    public function update(Request $request, ShiftCategory $category): RedirectResponse
     {
         $user = $request->user();
 
