@@ -115,7 +115,7 @@ class TimerService
     // Created lazily so booting the app does not depend on the database schema
     private function breakCategory(): ShiftCategory
     {
-        return ShiftCategory::firstOrCreate(['name' => 'Break', 'owner_id' => null], ['color' => '#000000']);
+        return ShiftCategory::firstOrCreate(['name' => 'Break', 'owner_id' => null], ['color' => '#32a2a8']);
     }
 
     private function putStatus(User $user, TimerStatus $status): bool

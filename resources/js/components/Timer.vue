@@ -39,7 +39,11 @@ watch(
 const now = ref(Date.now());
 let interval: ReturnType<typeof setInterval> | undefined;
 
+const mounted = ref(false);
+
 onMounted(() => {
+    mounted.value = true;
+    now.value = Date.now();
     interval = setInterval(() => (now.value = Date.now()), 1000);
 });
 onBeforeUnmount(() => clearInterval(interval));
@@ -176,7 +180,7 @@ const selectedValue = computed({
 
         <div class="flex min-w-0 items-center gap-2 px-1">
             <div class="size-4 shrink-0">
-                <TimerReaction v-if="isActive" :second="seconds" />
+                <TimerReaction v-if="isActive && mounted" :second="seconds" />
             </div>
             <span class="font-mono text-3xl font-semibold tabular-nums">
                 {{ display }}

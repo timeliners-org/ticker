@@ -14,8 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $user_id
  * @property string $description
  * @property int $shift_category_id
- * @property \DateTime|null $start_time
- * @property \DateTime|null $end_time
+ * @property Carbon $start_time
+ * @property Carbon|null $end_time
  * @property int|null $connected_shift_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -28,6 +28,15 @@ class Shift extends Model
 {
     /** @use HasFactory<ShiftFactory> */
     use HasFactory;
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'start_time' => 'datetime',
+            'end_time' => 'datetime',
+        ];
+    }
 
     /** @return BelongsTo<ShiftCategory, $this> */
     public function category(): BelongsTo
