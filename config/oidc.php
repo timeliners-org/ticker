@@ -80,6 +80,8 @@ return [
             'client_id' => env('TIMELINERS_CLIENT_ID'),
             'client_secret' => env('TIMELINERS_CLIENT_SECRET'),
             'redirect' => env('TIMELINERS_REDIRECT_URI'),
+            // Tolerates small clock differences between this app and the IdP
+            'clock_skew' => (int) env('TIMELINERS_CLOCK_SKEW', 60),
         ],
     ],
 
