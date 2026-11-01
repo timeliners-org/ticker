@@ -5,5 +5,4 @@ use App\Providers\TimerServiceProvider;
 
 return [
     AppServiceProvider::class,
-    TimerServiceProvider::class,
 ];

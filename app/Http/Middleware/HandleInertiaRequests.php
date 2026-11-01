@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ShiftCategory;
+use App\Models\User;
+use App\Services\TimerService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,11 +38,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        /**
+         * @var User|null
+         */
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+            ],
+            'timer' => [
+                'status' => $user ? TimerService::getUserStatus($user) : null,
+                'categories' => $user ? ShiftCategory::whereIn('owner_id', $user->teams()->select('teams.id'))->get(['id', 'name', 'color']) : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

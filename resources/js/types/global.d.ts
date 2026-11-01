@@ -1,5 +1,7 @@
 import type { Directive } from 'vue';
 import type { Auth } from '@/types/auth';
+import type { Timer } from '@/types/timer';
+import type { TimerStatus, ShiftCategory } from '@/types/timer';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -20,6 +22,11 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            timer: Timer;
+            timer: {
+                status: TimerStatus | null;
+                categories: ShiftCategory[] | null;
+            }
             [key: string]: unknown;
         };
     }

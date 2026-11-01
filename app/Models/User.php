@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Carbon;
 
@@ -43,5 +44,11 @@ class User extends Authenticatable
     public function shifts(): HasMany
     {
         return $this->hasMany(Shift::class, 'user_id');
+    }
+
+    /** @return HasManyThrough<ShiftCategory, Shift, $this> */
+    public function categories(): HasManyThrough
+    {
+        return $this->hasManyThrough(ShiftCategory::class, Shift::class, 'user_id', 'id', 'id', 'shift_category_id');
     }
 }

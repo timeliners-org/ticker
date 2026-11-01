@@ -1,28 +1,17 @@
 <?php
 
-namespace App\Providers;
+namespace App\Services;
 
 use App\Data\TimerStatus;
 use App\Models\Shift;
 use App\Models\ShiftCategory;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\ServiceProvider;
 use LogicException;
 
-class TimerServiceProvider extends ServiceProvider
+class TimerService
 {
-    /**
-     * Register services.
-     */
-    public function register(): void {}
-
-    /**
-     * Bootstrap services.
-     */
-    public function boot(): void {}
-
-    public function getUserStatus(User $user): ?TimerStatus
+    public static function getUserStatus(User $user): ?TimerStatus
     {
         $data = Cache::get(TimerStatus::cacheKey($user->getKey()));
 
@@ -31,7 +20,7 @@ class TimerServiceProvider extends ServiceProvider
 
     public function startShift(User $user, ShiftCategory $shiftCategory): bool
     {
-        return $this->putStatus($user, new TimerStatus(now(), $shiftCategory->getKey()));
+        return $this->putStatus($user, new TimerStatus(now(), now(), $shiftCategory->getKey()));
     }
 
     public function pauseShift(User $user): bool
@@ -59,8 +48,8 @@ class TimerServiceProvider extends ServiceProvider
         $break = Shift::create([
             'user_id' => $user->getKey(),
             'shift_category_id' => $this->breakCategory()->getKey(),
-            'start_time' => $status->startedAt,
-            'end_time' => $status->pausedAt,
+            'start_time' => $status->pausedAt,
+            'end_time' => $time,
         ]);
 
         $shift = Shift::create([
@@ -68,7 +57,6 @@ class TimerServiceProvider extends ServiceProvider
             'shift_category_id' => $status->shiftCategoryId,
             'start_time' => $status->startedAt,
             'end_time' => $status->pausedAt,
-            'unpaused_at' => $time,
             'connected_shift_id' => $break->getKey(),
         ]);
 
@@ -76,7 +64,8 @@ class TimerServiceProvider extends ServiceProvider
             $this->updateShift($user, $shift->getKey(), $status->updateShiftId);
         }
 
-        return $this->putStatus($user, new TimerStatus($time, $shiftCategory?->getKey() ?? $status->shiftCategoryId));
+        // The break links to whichever shift is created next
+        return $this->putStatus($user, new TimerStatus($status->createdAt, $time, $shiftCategory?->getKey() ?? $status->shiftCategoryId, updateShiftId: $break->getKey()));
     }
 
     public function updateCategory(User $user, ShiftCategory $shiftCategory): bool
@@ -96,7 +85,11 @@ class TimerServiceProvider extends ServiceProvider
             'end_time' => $time,
         ]);
 
-        return $this->putStatus($user, new TimerStatus($time, $shiftCategory->getKey(), updateShiftId: $shift->getKey()));
+        if ($status->updateTargetSet()) {
+            $this->updateShift($user, $shift->getKey(), $status->updateShiftId);
+        }
+
+        return $this->putStatus($user, new TimerStatus($status->createdAt, $time, $shiftCategory->getKey(), updateShiftId: $shift->getKey()));
     }
 
     public function stopShift(User $user): bool
@@ -116,7 +109,7 @@ class TimerServiceProvider extends ServiceProvider
             $this->updateShift($user, $shift->getKey(), $status->updateShiftId);
         }
 
-        return $this->putStatus($user, new TimerStatus($time, $status->shiftCategoryId, updateShiftId: $shift->getKey()));
+        return Cache::forget(TimerStatus::cacheKey($user->getKey()));
     }
 
     // Created lazily so booting the app does not depend on the database schema
@@ -132,7 +125,7 @@ class TimerServiceProvider extends ServiceProvider
 
     private function requireStatus(User $user, string $message): TimerStatus
     {
-        return $this->getUserStatus($user) ?? throw new LogicException($message);
+        return self::getUserStatus($user) ?? throw new LogicException($message);
     }
 
     /**

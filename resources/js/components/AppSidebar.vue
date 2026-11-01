@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
-import AppLogo from '@/components/AppLogo.vue';
-import NavFooter from '@/components/NavFooter.vue';
-import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
+import { Link, usePage } from "@inertiajs/vue3";
+import { BookOpen, FolderGit2, LayoutGrid } from "@lucide/vue";
+import AppLogo from "@/components/AppLogo.vue";
+import NavFooter from "@/components/NavFooter.vue";
+import NavMain from "@/components/NavMain.vue";
+import NavUser from "@/components/NavUser.vue";
+import TimerWrapper from "@/components/TimerWrapper.vue";
 import {
     Sidebar,
     SidebarContent,
@@ -13,13 +14,14 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+} from "@/components/ui/sidebar";
+import { dashboard } from "@/routes";
+import type { NavItem } from "@/types";
+import { computed } from "vue";
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: "Dashboard",
         href: dashboard(),
         icon: LayoutGrid,
     },
@@ -48,6 +50,7 @@ const footerNavItems: NavItem[] = [];
 
         <SidebarFooter>
             <NavFooter :items="footerNavItems" />
+            <TimerWrapper class="group-data-[collapsible=icon]:hidden" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>
