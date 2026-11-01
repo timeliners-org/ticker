@@ -56,7 +56,9 @@ const footerNavItems: NavItem[] = [];
 
         <SidebarFooter>
             <NavFooter :items="footerNavItems" />
-            <TimerWrapper class="group-data-[collapsible=icon]:hidden" />
+            <TimerWrapper
+                class="hidden group-data-[collapsible=icon]:hidden md:block"
+            />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

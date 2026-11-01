@@ -16,7 +16,10 @@ import TimerReaction from '@/components/TimerReaction.vue';
 
 const props = defineProps<{
     timer: Timer;
+    size?: 'compact' | 'full';
 }>();
+
+const size = props.size ?? 'compact';
 
 const status = computed(() => props.timer.status);
 const isActive = computed(() => status.value !== null);
@@ -153,10 +156,20 @@ const selectedValue = computed({
 
 <template>
     <div
-        class="grid w-full grid-cols-[minmax(0,1fr)_2.25rem_2.25rem] items-center gap-2 rounded-xl border border-sidebar-border/70 p-2 dark:border-sidebar-border"
+        class="grid w-full items-center"
+        :class="
+            size === 'full'
+                ? 'grid-cols-1 gap-4'
+                : 'grid-cols-[minmax(0,1fr)_2.25rem_2.25rem] gap-2 rounded-xl border border-sidebar-border/70 p-2 dark:border-sidebar-border'
+        "
     >
         <div
-            class="col-span-3 flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground"
+            class="flex items-center justify-between gap-2 px-1 text-muted-foreground"
+            :class="
+                size === 'full'
+                    ? 'col-span-1 py-1 text-base'
+                    : 'col-span-3 text-xs'
+            "
         >
             <span class="flex min-w-0 items-center gap-1.5">
                 <template v-if="activeCategory">
@@ -178,14 +191,28 @@ const selectedValue = computed({
         </div>
 
         <div
-            class="col-span-3 h-px bg-sidebar-border/70 dark:bg-sidebar-border"
+            class="h-px bg-sidebar-border/70 dark:bg-sidebar-border"
+            :class="size === 'full' ? 'col-span-1' : 'col-span-3'"
         />
 
-        <div class="flex min-w-0 items-center gap-2 px-1">
-            <div class="size-4 shrink-0">
+        <div
+            class="flex min-w-0 items-center gap-2 px-1"
+            :class="
+                size === 'full'
+                    ? 'col-span-1 flex-col justify-center gap-3 py-6 text-center'
+                    : ''
+            "
+        >
+            <div v-if="size !== 'full'" class="size-4 shrink-0">
                 <TimerReaction v-if="isActive && mounted" :second="seconds" />
             </div>
-            <span class="font-mono text-3xl font-semibold tabular-nums">
+            <div v-else-if="isActive && mounted" class="size-8 shrink-0">
+                <TimerReaction :second="seconds" />
+            </div>
+            <span
+                class="font-mono font-semibold tabular-nums"
+                :class="size === 'full' ? 'text-5xl sm:text-6xl' : 'text-3xl'"
+            >
                 {{ display }}
             </span>
         </div>
@@ -194,37 +221,64 @@ const selectedValue = computed({
             v-if="isRunning"
             size="icon"
             class="rounded bg-blue-500 text-white hover:bg-blue-600"
+            :class="
+                size === 'full'
+                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
+                    : ''
+            "
             aria-label="Pause"
             @click="onPause"
         >
             <Pause />
+            <span v-if="size === 'full'">Pause timer</span>
         </Button>
         <Button
             v-else
             size="icon"
             class="rounded bg-green-500 text-white hover:bg-green-600"
-            :class="isActive ? 'col-start-2' : 'col-start-3'"
+            :class="[
+                size === 'full'
+                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
+                    : isActive
+                      ? 'col-start-2'
+                      : 'col-start-3',
+            ]"
             aria-label="Start"
             :disabled="selectedId === null"
             @click="onPlay"
         >
             <Play />
+            <span v-if="size === 'full'">
+                {{ isPaused ? 'Resume timer' : 'Start timer' }}
+            </span>
         </Button>
 
         <Button
             v-if="isActive"
             size="icon"
             class="rounded bg-red-500 text-white hover:bg-red-600"
+            :class="
+                size === 'full'
+                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
+                    : ''
+            "
             aria-label="Stop"
             @click="onStop"
         >
             <Square />
+            <span v-if="size === 'full'">Stop timer</span>
         </Button>
 
         <Select v-model="selectedValue">
             <SelectTrigger
-                :class="categoryChanged ? 'col-span-2' : 'col-span-3'"
-                class="w-full"
+                :class="[
+                    size === 'full'
+                        ? 'col-span-1 h-14 text-base'
+                        : categoryChanged
+                          ? 'col-span-2'
+                          : 'col-span-3',
+                    'w-full',
+                ]"
             >
                 <SelectValue placeholder="Select category" />
             </SelectTrigger>
@@ -250,10 +304,16 @@ const selectedValue = computed({
             size="icon"
             variant="outline"
             class="rounded"
+            :class="
+                size === 'full'
+                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
+                    : ''
+            "
             aria-label="Confirm category change"
             @click="onSaveCategory"
         >
             <Check />
+            <span v-if="size === 'full'">Save category</span>
         </Button>
     </div>
 </template>
