@@ -16,6 +16,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('teams/{teamId}', [Teams::class, 'destroy'])->name('teams.destroy');
     Route::post('teams/{teamId}/leave', [Teams::class, 'leave'])->name('teams.leave');
     Route::post('teams/{teamId}/categories', [Teams::class, 'addCategory'])->name('teams.addCategory');
+    Route::put('teams/{teamId}/categories/{id}', [Teams::class, 'updateCategory'])->name('teams.updateCategory');
+    Route::delete('teams/{teamId}/categories/{id}', [Teams::class, 'removeCategory'])->name('teams.removeCategory');
 });
 
 require __DIR__.'/settings.php';

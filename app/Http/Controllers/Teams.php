@@ -157,6 +157,52 @@ class Teams extends Controller
         return back();
     }
 
+    public function removeCategory(Request $request, int $teamId, int $id): RedirectResponse
+    {
+        // TODO: If a category is in use by shifts, prevent deletion or handle it appropriately
+        // IDEA: Ask user which category the existing shifts should be moved to before deletion
+        /**
+         * @var User
+         */
+        $user = $request->user();
+
+        $team = $user->teams()->findOrFail($teamId);
+
+        if (! $user->isAdminOf($team)) {
+            abort(403);
+        }
+
+        $team->shiftCategories()->where('id', $id)->delete();
+
+        return back();
+    }
+
+    public function updateCategory(Request $request, int $teamId, int $id): RedirectResponse
+    {
+        /**
+         * @var User
+         */
+        $user = $request->user();
+
+        $team = $user->teams()->findOrFail($teamId);
+
+        if (! $user->isAdminOf($team)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name' => $this->nameRules(),
+            'color' => $this->colorRules(),
+        ]);
+
+        $team->shiftCategories()->where('id', $id)->update([
+            'name' => $validated['name'],
+            'color' => $validated['color'],
+        ]);
+
+        return back();
+    }
+
     /** @return array<int, string> */
     private function nameRules(): array
     {

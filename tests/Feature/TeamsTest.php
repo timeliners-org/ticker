@@ -93,3 +93,93 @@ test('a non-admin cannot delete a team', function () {
 
     $this->assertDatabaseHas('teams', ['id' => $team->id]);
 });
+
+test('an admin can update a category', function () {
+    $team = Team::factory()->create();
+    $team->members()->create([
+        'user_id' => $this->user->id,
+        'is_admin' => true,
+    ]);
+    $category = $team->shiftCategories()->create([
+        'name' => 'Work',
+        'color' => '#123456',
+    ]);
+
+    $this->put(route('teams.updateCategory', [
+        'teamId' => $team->id,
+        'id' => $category->id,
+    ]), [
+        'name' => 'Planning',
+        'color' => '#ABCDEF',
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('shift_categories', [
+        'id' => $category->id,
+        'name' => 'Planning',
+        'color' => '#ABCDEF',
+    ]);
+});
+
+test('a non-admin cannot update a category', function () {
+    $team = Team::factory()->create();
+    $team->members()->create([
+        'user_id' => $this->user->id,
+        'is_admin' => false,
+    ]);
+    $category = $team->shiftCategories()->create([
+        'name' => 'Work',
+        'color' => '#123456',
+    ]);
+
+    $this->put(route('teams.updateCategory', [
+        'teamId' => $team->id,
+        'id' => $category->id,
+    ]), [
+        'name' => 'Planning',
+        'color' => '#ABCDEF',
+    ])->assertForbidden();
+
+    $this->assertDatabaseHas('shift_categories', [
+        'id' => $category->id,
+        'name' => 'Work',
+        'color' => '#123456',
+    ]);
+});
+
+test('an admin can remove a category', function () {
+    $team = Team::factory()->create();
+    $team->members()->create([
+        'user_id' => $this->user->id,
+        'is_admin' => true,
+    ]);
+    $category = $team->shiftCategories()->create([
+        'name' => 'Work',
+        'color' => '#123456',
+    ]);
+
+    $this->delete(route('teams.removeCategory', [
+        'teamId' => $team->id,
+        'id' => $category->id,
+    ]))->assertRedirect();
+
+    $this->assertDatabaseMissing('shift_categories', ['id' => $category->id]);
+});
+
+test('a non-admin cannot remove a category', function () {
+    $team = Team::factory()->create();
+    $team->members()->create([
+        'user_id' => $this->user->id,
+        'is_admin' => false,
+    ]);
+    $category = $team->shiftCategories()->create([
+        'name' => 'Work',
+        'color' => '#123456',
+    ]);
+
+    $this->delete(route('teams.removeCategory', [
+        'teamId' => $team->id,
+        'id' => $category->id,
+    ]))->assertForbidden();
+
+    $this->assertDatabaseHas('shift_categories', ['id' => $category->id]);
+});

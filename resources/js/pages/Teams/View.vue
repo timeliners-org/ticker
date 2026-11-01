@@ -54,7 +54,10 @@ const props = defineProps<{
 }>();
 
 const editingName = ref(false);
-const addCategoryOpen = ref(false);
+const categoryDialogOpen = ref(false);
+const editingCategoryId = ref<number | null>(null);
+const deleteCategoryOpen = ref(false);
+const categoryToDelete = ref<TeamCategory | null>(null);
 const leaveOpen = ref(false);
 const deleteOpen = ref(false);
 const nameForm = useForm({ name: props.team.name });
@@ -84,14 +87,62 @@ function cancelNameEdit() {
     editingName.value = false;
 }
 
-function addCategory() {
-    categoryForm.post(`/teams/${props.team.id}/categories`, {
+function openAddCategory() {
+    editingCategoryId.value = null;
+    categoryForm.clearErrors();
+    categoryForm.reset();
+    categoryDialogOpen.value = true;
+}
+
+function openEditCategory(category: TeamCategory) {
+    editingCategoryId.value = category.id;
+    categoryForm.clearErrors();
+    categoryForm.name = category.name;
+    categoryForm.color = category.color;
+    categoryDialogOpen.value = true;
+}
+
+function saveCategory() {
+    const options = {
         preserveScroll: true,
         onSuccess: () => {
-            addCategoryOpen.value = false;
+            categoryDialogOpen.value = false;
+            editingCategoryId.value = null;
             categoryForm.reset();
         },
-    });
+    };
+
+    if (editingCategoryId.value !== null) {
+        categoryForm.put(
+            `/teams/${props.team.id}/categories/${editingCategoryId.value}`,
+            options,
+        );
+        return;
+    }
+
+    categoryForm.post(`/teams/${props.team.id}/categories`, options);
+}
+
+function openDeleteCategory(category: TeamCategory) {
+    categoryToDelete.value = category;
+    deleteCategoryOpen.value = true;
+}
+
+function deleteCategory() {
+    if (categoryToDelete.value === null) {
+        return;
+    }
+
+    router.delete(
+        `/teams/${props.team.id}/categories/${categoryToDelete.value.id}`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                deleteCategoryOpen.value = false;
+                categoryToDelete.value = null;
+            },
+        },
+    );
 }
 
 function leaveTeam() {
@@ -303,9 +354,16 @@ defineOptions({
                     <h2 id="categories-heading" class="text-lg font-semibold">
                         Categories
                     </h2>
-                    <Dialog v-if="team.is_admin" v-model:open="addCategoryOpen">
+                    <Dialog
+                        v-if="team.is_admin"
+                        v-model:open="categoryDialogOpen"
+                    >
                         <DialogTrigger as-child>
-                            <Button size="sm" variant="outline">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                @click="openAddCategory"
+                            >
                                 <Plus class="size-4" />
                                 Add category
                             </Button>
@@ -313,12 +371,18 @@ defineOptions({
                         <DialogContent>
                             <form
                                 class="space-y-6"
-                                @submit.prevent="addCategory"
+                                @submit.prevent="saveCategory"
                             >
                                 <DialogHeader>
-                                    <DialogTitle>New category</DialogTitle>
+                                    <DialogTitle>
+                                        {{
+                                            editingCategoryId === null
+                                                ? 'New category'
+                                                : 'Edit category'
+                                        }}
+                                    </DialogTitle>
                                     <DialogDescription>
-                                        Set a name and a color for the category.
+                                        Set the category name and color.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -386,12 +450,41 @@ defineOptions({
                                     >
                                         {{
                                             categoryForm.processing
-                                                ? 'Adding...'
-                                                : 'Add category'
+                                                ? 'Saving...'
+                                                : editingCategoryId === null
+                                                  ? 'Add category'
+                                                  : 'Save changes'
                                         }}
                                     </Button>
                                 </DialogFooter>
                             </form>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog
+                        v-if="team.is_admin"
+                        v-model:open="deleteCategoryOpen"
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    Delete {{ categoryToDelete?.name }}?
+                                </DialogTitle>
+                                <DialogDescription>
+                                    This category will be permanently removed.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                                <DialogClose as-child>
+                                    <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button
+                                    variant="destructive"
+                                    @click="deleteCategory"
+                                >
+                                    Delete category
+                                </Button>
+                            </DialogFooter>
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -415,6 +508,27 @@ defineOptions({
                         <span class="font-mono text-xs text-muted-foreground">
                             {{ category.color }}
                         </span>
+                        <div v-if="team.is_admin" class="flex shrink-0">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                :aria-label="`Edit ${category.name}`"
+                                :title="`Edit ${category.name}`"
+                                @click="openEditCategory(category)"
+                            >
+                                <Pencil class="size-4" />
+                            </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                class="text-destructive hover:text-destructive"
+                                :aria-label="`Delete ${category.name}`"
+                                :title="`Delete ${category.name}`"
+                                @click="openDeleteCategory(category)"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </div>
                     </li>
                     <li
                         v-if="!team.shiftCategories.length"
