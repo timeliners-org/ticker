@@ -155,21 +155,9 @@ const selectedValue = computed({
 </script>
 
 <template>
-    <div
-        class="grid w-full items-center"
-        :class="
-            size === 'full'
-                ? 'grid-cols-1 gap-4'
-                : 'grid-cols-[minmax(0,1fr)_2.25rem_2.25rem] gap-2 rounded-xl border border-sidebar-border/70 p-2 dark:border-sidebar-border'
-        "
-    >
+    <div v-if="size === 'full'" class="grid w-full grid-cols-1 gap-4">
         <div
-            class="flex items-center justify-between gap-2 px-1 text-muted-foreground"
-            :class="
-                size === 'full'
-                    ? 'col-span-1 py-1 text-base'
-                    : 'col-span-3 text-xs'
-            "
+            class="flex items-center justify-between gap-2 px-1 py-1 text-base text-muted-foreground"
         >
             <span class="flex min-w-0 items-center gap-1.5">
                 <template v-if="activeCategory">
@@ -190,28 +178,16 @@ const selectedValue = computed({
             </span>
         </div>
 
-        <div
-            class="h-px bg-sidebar-border/70 dark:bg-sidebar-border"
-            :class="size === 'full' ? 'col-span-1' : 'col-span-3'"
-        />
+        <div class="h-px bg-sidebar-border/70 dark:bg-sidebar-border" />
 
         <div
-            class="flex min-w-0 items-center gap-2 px-1"
-            :class="
-                size === 'full'
-                    ? 'col-span-1 flex-col justify-center gap-3 py-6 text-center'
-                    : ''
-            "
+            class="flex min-w-0 flex-col items-center justify-center gap-3 py-6 text-center"
         >
-            <div v-if="size !== 'full'" class="size-4 shrink-0">
-                <TimerReaction v-if="isActive && mounted" :second="seconds" />
-            </div>
-            <div v-else-if="isActive && mounted" class="size-8 shrink-0">
+            <div v-if="isActive && mounted" class="size-8 shrink-0">
                 <TimerReaction :second="seconds" />
             </div>
             <span
-                class="font-mono font-semibold tabular-nums"
-                :class="size === 'full' ? 'text-5xl sm:text-6xl' : 'text-3xl'"
+                class="font-mono text-5xl font-semibold tabular-nums sm:text-6xl"
             >
                 {{ display }}
             </span>
@@ -219,67 +195,35 @@ const selectedValue = computed({
 
         <Button
             v-if="isRunning"
-            size="icon"
-            class="rounded bg-blue-500 text-white hover:bg-blue-600"
-            :class="
-                size === 'full'
-                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
-                    : ''
-            "
-            aria-label="Pause"
+            class="h-14 w-full gap-3 rounded bg-blue-500 text-base text-white hover:bg-blue-600 [&_svg]:size-5"
+            aria-label="Pause timer"
             @click="onPause"
         >
             <Pause />
-            <span v-if="size === 'full'">Pause timer</span>
+            Pause timer
         </Button>
         <Button
             v-else
-            size="icon"
-            class="rounded bg-green-500 text-white hover:bg-green-600"
-            :class="[
-                size === 'full'
-                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
-                    : isActive
-                      ? 'col-start-2'
-                      : 'col-start-3',
-            ]"
-            aria-label="Start"
+            class="h-14 w-full gap-3 rounded bg-green-500 text-base text-white hover:bg-green-600 [&_svg]:size-5"
+            aria-label="Start timer"
             :disabled="selectedId === null"
             @click="onPlay"
         >
             <Play />
-            <span v-if="size === 'full'">
-                {{ isPaused ? 'Resume timer' : 'Start timer' }}
-            </span>
+            {{ isPaused ? 'Resume timer' : 'Start timer' }}
         </Button>
-
         <Button
             v-if="isActive"
-            size="icon"
-            class="rounded bg-red-500 text-white hover:bg-red-600"
-            :class="
-                size === 'full'
-                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
-                    : ''
-            "
-            aria-label="Stop"
+            class="h-14 w-full gap-3 rounded bg-red-500 text-base text-white hover:bg-red-600 [&_svg]:size-5"
+            aria-label="Stop timer"
             @click="onStop"
         >
             <Square />
-            <span v-if="size === 'full'">Stop timer</span>
+            Stop timer
         </Button>
 
         <Select v-model="selectedValue">
-            <SelectTrigger
-                :class="[
-                    size === 'full'
-                        ? 'col-span-1 h-14 text-base'
-                        : categoryChanged
-                          ? 'col-span-2'
-                          : 'col-span-3',
-                    'w-full',
-                ]"
-            >
+            <SelectTrigger class="h-14 w-full text-base">
                 <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
@@ -301,19 +245,120 @@ const selectedValue = computed({
 
         <Button
             v-if="categoryChanged"
-            size="icon"
             variant="outline"
-            class="rounded"
-            :class="
-                size === 'full'
-                    ? 'h-14 w-full gap-3 text-base [&_svg]:size-5'
-                    : ''
-            "
-            aria-label="Confirm category change"
+            class="h-14 w-full gap-3 text-base [&_svg]:size-5"
+            aria-label="Save category"
             @click="onSaveCategory"
         >
             <Check />
-            <span v-if="size === 'full'">Save category</span>
+            Save category
         </Button>
+    </div>
+
+    <div
+        v-else
+        class="grid w-full grid-cols-1 gap-1 rounded-xl border border-sidebar-border/70 p-2 dark:border-sidebar-border"
+    >
+        <div
+            class="flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground"
+        >
+            <span class="flex min-w-0 items-center gap-1.5">
+                <template v-if="activeCategory">
+                    <span
+                        class="size-2 shrink-0 rounded-full"
+                        :style="{ backgroundColor: activeCategory.color }"
+                    />
+                    <span class="truncate">{{ activeCategory.name }}</span>
+                    <span v-if="isPaused">· paused</span>
+                </template>
+                <span v-else>No active shift</span>
+            </span>
+            <span
+                class="shrink-0 font-mono tabular-nums"
+                :title="sessionTooltip"
+            >
+                {{ sessionDisplay }}
+            </span>
+        </div>
+
+        <div class="h-px bg-sidebar-border/70 dark:bg-sidebar-border" />
+
+        <div class="flex min-w-0 items-center justify-between gap-2">
+            <div class="flex min-w-0 items-center gap-2 px-1">
+                <div class="size-4 shrink-0">
+                    <TimerReaction
+                        v-if="isActive && mounted"
+                        :second="seconds"
+                    />
+                </div>
+                <span class="font-mono text-3xl font-semibold tabular-nums">
+                    {{ display }}
+                </span>
+            </div>
+
+            <div class="flex shrink-0 items-center gap-1">
+                <Button
+                    v-if="isRunning"
+                    size="icon"
+                    class="rounded bg-blue-500 text-white hover:bg-blue-600"
+                    aria-label="Pause"
+                    @click="onPause"
+                >
+                    <Pause />
+                </Button>
+                <Button
+                    v-else
+                    size="icon"
+                    class="rounded bg-green-500 text-white hover:bg-green-600"
+                    aria-label="Start"
+                    :disabled="selectedId === null"
+                    @click="onPlay"
+                >
+                    <Play />
+                </Button>
+                <Button
+                    v-if="isActive"
+                    size="icon"
+                    class="rounded bg-red-500 text-white hover:bg-red-600"
+                    aria-label="Stop"
+                    @click="onStop"
+                >
+                    <Square />
+                </Button>
+            </div>
+        </div>
+
+        <div class="flex min-w-0 items-center gap-2">
+            <Select v-model="selectedValue" class="min-w-0 flex-1">
+                <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="category in timer.categories"
+                        :key="category.id"
+                        :value="String(category.id)"
+                    >
+                        <span class="flex items-center gap-2">
+                            <span
+                                class="size-2.5 rounded-full"
+                                :style="{ backgroundColor: category.color }"
+                            />
+                            {{ category.name }}
+                        </span>
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+            <Button
+                v-if="categoryChanged"
+                size="icon"
+                variant="outline"
+                class="rounded"
+                aria-label="Confirm category change"
+                @click="onSaveCategory"
+            >
+                <Check />
+            </Button>
+        </div>
     </div>
 </template>
