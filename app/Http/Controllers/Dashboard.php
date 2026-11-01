@@ -47,6 +47,8 @@ class Dashboard extends Controller
         $todayWorkingTime = Shift::query()
             ->where('user_id', $user->id)
             ->whereNotNull('end_time')
+            ->with('category')
+            ->whereHas('category', fn ($query) => $query->whereNotNull('owner_id'))
             ->where('start_time', '>=', now()->startOfDay())
             ->get()
             ->reduce(fn (int $sum, $shift) => $sum + $shift->start_time->diffInSeconds($shift->end_time, true), 0);

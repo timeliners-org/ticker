@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import PlaceholderPattern from "@/components/PlaceholderPattern.vue";
 import { dashboard } from "@/routes";
-import { computed, ref } from "vue";
+import { Clock } from "@lucide/vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { VisAxis, VisStackedBar, VisXYContainer } from "@unovis/vue";
@@ -20,6 +21,8 @@ const props = defineProps<{
     shifts: DashboardShifts;
     todayWorkingTime: number;
 }>();
+
+const page = usePage();
 
 const hideBreaks = ref(false);
 
@@ -74,12 +77,36 @@ const yAccessors = computed(() =>
 const colors = computed(() =>
     categories.value.map((name) => chartConfig.value[name].color!),
 );
+
 const formatHours = (hours: number) => {
     const totalMinutes = Math.round(hours * 60);
     const h = Math.floor(totalMinutes / 60);
     const m = String(totalMinutes % 60).padStart(2, "0");
     return `${h}:${m}`;
 };
+// Reactive clock so the display keeps updating while the timer runs.
+const now = ref(Date.now());
+let clockInterval: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+    clockInterval = setInterval(() => (now.value = Date.now()), 1000);
+});
+onUnmounted(() => clearInterval(clockInterval));
+
+const todayWorkingTimeDisplay = computed(() => {
+    let workTime = props.todayWorkingTime;
+    const status = page.props.timer.status;
+    // Add the currently running shift, which is not stored as finished yet
+    if (status?.startedAt && !status.pausedAt) {
+        workTime += Math.max(
+            0,
+            Math.floor(
+                (now.value - new Date(status.startedAt).getTime()) / 1000,
+            ),
+        );
+    }
+
+    return formatHours(workTime / 3600);
+});
 const formatDay = (tick: number | Date) => {
     const row = chartData.value[Math.round(Number(tick))];
     return row ? String(row.date) : "";
@@ -105,9 +132,30 @@ defineOptions({
     >
         <div class="grid auto-rows-min gap-4 md:grid-cols-3">
             <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 bg-gradient-to-br from-card to-muted/40 dark:border-sidebar-border"
             >
-                <PlaceholderPattern />
+                <div
+                    class="absolute -top-16 -right-16 size-48 rounded-full bg-primary/10 blur-3xl"
+                />
+                <div
+                    class="absolute -bottom-16 -left-16 size-48 rounded-full bg-chart-2/10 blur-3xl"
+                />
+                <div
+                    class="relative flex h-full flex-col items-center justify-center gap-2"
+                >
+                    <div
+                        class="flex items-center gap-2 text-sm font-medium tracking-wide text-muted-foreground uppercase"
+                    >
+                        <Clock class="size-4" />
+                        Today's Working Time
+                    </div>
+                    <span
+                        class="bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-7xl font-bold tracking-tight text-transparent tabular-nums"
+                    >
+                        {{ todayWorkingTimeDisplay }}
+                    </span>
+                    <span class="text-xs text-muted-foreground">hours</span>
+                </div>
             </div>
             <div
                 class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
