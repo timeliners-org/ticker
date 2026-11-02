@@ -58,3 +58,58 @@ test('daily shifts include categories and only return the authenticated user shi
         ->assertJsonPath('0.connected_shift_id', $secondShift->id)
         ->assertJsonPath('1.id', $secondShift->id);
 });
+
+test('users cannot update or delete another users shifts', function () {
+    $user = User::factory()->create();
+    $owner = User::factory()->create();
+    $category = ShiftCategory::factory()->create();
+    $shift = Shift::create([
+        'user_id' => $owner->id,
+        'shift_category_id' => $category->id,
+        'start_time' => '2026-10-31 08:00:00',
+        'end_time' => '2026-10-31 09:00:00',
+    ]);
+
+    $this->actingAs($user)
+        ->putJson(route('shifts.updateShift'), [
+            'id' => $shift->id,
+            'start_time' => '2026-10-31 10:00:00',
+            'end_time' => '2026-10-31 11:00:00',
+            'shift_category_id' => $category->id,
+        ])
+        ->assertNotFound();
+
+    $this->deleteJson(route('shifts.deleteShift'), ['id' => $shift->id])
+        ->assertNotFound();
+
+    $this->assertDatabaseHas('shifts', [
+        'id' => $shift->id,
+        'user_id' => $owner->id,
+        'start_time' => '2026-10-31 08:00:00',
+        'end_time' => '2026-10-31 09:00:00',
+    ]);
+});
+
+test('shift updates reject inverted time ranges', function (string $startTime, string $endTime) {
+    $user = User::factory()->create();
+    $category = ShiftCategory::factory()->create();
+    $shift = Shift::create([
+        'user_id' => $user->id,
+        'shift_category_id' => $category->id,
+        'start_time' => '2026-10-31 08:00:00',
+        'end_time' => '2026-10-31 09:00:00',
+    ]);
+
+    $this->actingAs($user)
+        ->putJson(route('shifts.updateShift'), [
+            'id' => $shift->id,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'shift_category_id' => $category->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('end_time');
+})->with([
+    'end before start' => ['2026-10-31 10:00:00', '2026-10-31 09:00:00'],
+    'start after end' => ['2026-10-31 11:00:00', '2026-10-31 10:00:00'],
+]);

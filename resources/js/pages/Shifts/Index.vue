@@ -1,14 +1,37 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import {
+    CalendarDays,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Clock3,
+    Trash2,
+    X,
+} from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { ShiftCategory } from '@/types/timer';
 
 type Shift = {
     id: number;
     start_time: string;
     end_time: string | null;
     connected_shift_id: number | null;
+    shift_category_id: number;
     category: {
+        id: number;
         name: string;
         color: string;
     };
@@ -17,6 +40,7 @@ type Shift = {
 const props = defineProps<{
     datesWithShifts: string[];
 }>();
+const page = usePage();
 
 function dateKey(date: Date): string {
     const year = date.getFullYear();
@@ -39,6 +63,39 @@ const visibleMonth = ref(parseDate(selectedDate.value));
 const shifts = ref<Shift[]>([]);
 const isLoading = ref(false);
 const loadError = ref('');
+const shiftDialogOpen = ref(false);
+const shiftLoading = ref(false);
+const shiftSaving = ref(false);
+const shiftDeleting = ref(false);
+const confirmDelete = ref(false);
+const shiftError = ref('');
+const activeShift = ref<Shift | null>(null);
+const shiftForm = reactive({
+    start_time: '',
+    end_time: '',
+    shift_category_id: '',
+});
+
+const availableCategories = computed<ShiftCategory[]>(() => {
+    const categories = [...(page.props.timer.categories ?? [])];
+    const currentCategory = activeShift.value?.category;
+
+    if (
+        activeShift.value &&
+        currentCategory &&
+        !categories.some(
+            (category) => category.id === activeShift.value?.shift_category_id,
+        )
+    ) {
+        categories.push({
+            id: activeShift.value.shift_category_id,
+            name: currentCategory.name,
+            color: currentCategory.color,
+        });
+    }
+
+    return categories;
+});
 
 const availableDates = computed(() => new Set(props.datesWithShifts));
 const monthLabel = computed(() =>
@@ -79,38 +136,42 @@ function changeMonth(offset: number) {
     );
 }
 
+async function loadDay(date: string, signal?: AbortSignal) {
+    isLoading.value = true;
+    loadError.value = '';
+
+    try {
+        const response = await fetch(
+            `/shifts/day?date=${encodeURIComponent(date)}`,
+            {
+                headers: { Accept: 'application/json' },
+                signal,
+            },
+        );
+
+        if (!response.ok) {
+            throw new Error('Unable to load shifts for this date.');
+        }
+
+        shifts.value = await response.json();
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+        }
+
+        loadError.value = 'Unable to load shifts for this date.';
+        shifts.value = [];
+    } finally {
+        isLoading.value = false;
+    }
+}
+
 watch(
     selectedDate,
-    async (date, _previousDate, onCleanup) => {
+    (date, _previousDate, onCleanup) => {
         const controller = new AbortController();
         onCleanup(() => controller.abort());
-        isLoading.value = true;
-        loadError.value = '';
-
-        try {
-            const response = await fetch(
-                `/shifts/day?date=${encodeURIComponent(date)}`,
-                {
-                    headers: { Accept: 'application/json' },
-                    signal: controller.signal,
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error('Unable to load shifts for this date.');
-            }
-
-            shifts.value = await response.json();
-        } catch (error) {
-            if (error instanceof DOMException && error.name === 'AbortError') {
-                return;
-            }
-
-            loadError.value = 'Unable to load shifts for this date.';
-            shifts.value = [];
-        } finally {
-            isLoading.value = false;
-        }
+        void loadDay(date, controller.signal);
     },
     { immediate: true },
 );
@@ -166,6 +227,131 @@ function formatTime(value: string | null): string {
         hour: '2-digit',
         minute: '2-digit',
     }).format(new Date(value));
+}
+
+function toLocalDateTime(value: string | null): string {
+    if (!value) return '';
+
+    const date = new Date(value);
+    const pad = (part: number) => String(part).padStart(2, '0');
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function xsrfToken(): string {
+    const token = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.slice('XSRF-TOKEN='.length);
+
+    return token ? decodeURIComponent(token) : '';
+}
+
+async function shiftRequest<T>(
+    url: string,
+    method: 'GET' | 'PUT' | 'DELETE',
+    data?: Record<string, string | number | null>,
+): Promise<T> {
+    const response = await fetch(url, {
+        method,
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': xsrfToken(),
+        },
+        ...(data ? { body: JSON.stringify(data) } : {}),
+    });
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        throw new Error(result?.message ?? 'The shift could not be saved.');
+    }
+
+    return result as T;
+}
+
+async function openShift(shift: Shift) {
+    shiftDialogOpen.value = true;
+    shiftLoading.value = true;
+    shiftError.value = '';
+    confirmDelete.value = false;
+    activeShift.value = null;
+
+    try {
+        activeShift.value = await shiftRequest<Shift>(
+            `/shifts/detail?id=${shift.id}`,
+            'GET',
+        );
+        shiftForm.start_time = toLocalDateTime(activeShift.value.start_time);
+        shiftForm.end_time = toLocalDateTime(activeShift.value.end_time);
+        shiftForm.shift_category_id = String(
+            activeShift.value.shift_category_id,
+        );
+    } catch (error) {
+        shiftError.value =
+            error instanceof Error ? error.message : 'Unable to load shift.';
+    } finally {
+        shiftLoading.value = false;
+    }
+}
+
+async function saveShift() {
+    if (!activeShift.value) return;
+
+    shiftSaving.value = true;
+    shiftError.value = '';
+
+    try {
+        const updatedShift = await shiftRequest<Shift>(
+            '/shifts/update',
+            'PUT',
+            {
+                id: activeShift.value.id,
+                start_time: `${shiftForm.start_time.replace('T', ' ')}:00`,
+                end_time: shiftForm.end_time
+                    ? `${shiftForm.end_time.replace('T', ' ')}:00`
+                    : null,
+                shift_category_id: Number(shiftForm.shift_category_id),
+            },
+        );
+        const updatedDate = dateKey(new Date(updatedShift.start_time));
+
+        shiftDialogOpen.value = false;
+        if (updatedDate !== selectedDate.value) {
+            selectedDate.value = updatedDate;
+        } else {
+            await loadDay(updatedDate);
+        }
+        router.reload({ only: ['datesWithShifts'] });
+    } catch (error) {
+        shiftError.value =
+            error instanceof Error ? error.message : 'Unable to save shift.';
+    } finally {
+        shiftSaving.value = false;
+    }
+}
+
+async function deleteShift() {
+    if (!activeShift.value) return;
+
+    shiftDeleting.value = true;
+    shiftError.value = '';
+
+    try {
+        await shiftRequest<{ deleted: boolean }>('/shifts/delete', 'DELETE', {
+            id: activeShift.value.id,
+        });
+        shiftDialogOpen.value = false;
+        confirmDelete.value = false;
+        await loadDay(selectedDate.value);
+        router.reload({ only: ['datesWithShifts'] });
+    } catch (error) {
+        shiftError.value =
+            error instanceof Error ? error.message : 'Unable to delete shift.';
+    } finally {
+        shiftDeleting.value = false;
+    }
 }
 
 defineOptions({
@@ -305,11 +491,14 @@ defineOptions({
                         <article
                             v-for="shift in group"
                             :key="shift.id"
-                            class="border-l-[3px] py-1 pl-4 bg-black/20 hover:bg-gray-800"
+                            class="rounded-sm border-l-[3px] transition-colors"
                             :style="{ borderColor: shift.category.color }"
                         >
-                            <div
-                                class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 "
+                            <button
+                                type="button"
+                                class="flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 pr-3 pl-4 text-left hover:bg-accent/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                :aria-label="`${shift.category.name}, ${formatTime(shift.start_time)} to ${formatTime(shift.end_time)}. Edit shift`"
+                                @click="openShift(shift)"
                             >
                                 <h3 class="font-medium">
                                     {{ shift.category.name }}
@@ -325,7 +514,7 @@ defineOptions({
                                     <span aria-hidden="true">–</span>
                                     {{ formatTime(shift.end_time) }}
                                 </p>
-                            </div>
+                            </button>
                         </article>
                     </div>
                 </div>
@@ -344,5 +533,141 @@ defineOptions({
                 </div>
             </section>
         </div>
+
+        <Dialog v-model:open="shiftDialogOpen">
+            <DialogContent>
+                <form class="space-y-6" @submit.prevent="saveShift">
+                    <DialogHeader>
+                        <DialogTitle>Edit shift</DialogTitle>
+                        <DialogDescription>
+                            Update the time or category for this shift.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <p
+                        v-if="shiftLoading"
+                        class="py-4 text-sm text-muted-foreground"
+                    >
+                        Loading shift...
+                    </p>
+                    <div v-else-if="activeShift" class="space-y-4">
+                        <div class="grid gap-2">
+                            <Label for="shift-category">Category</Label>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="size-3 shrink-0 rounded-full"
+                                    :style="{
+                                        backgroundColor:
+                                            availableCategories.find(
+                                                (category) =>
+                                                    category.id ===
+                                                    Number(
+                                                        shiftForm.shift_category_id,
+                                                    ),
+                                            )?.color,
+                                    }"
+                                    aria-hidden="true"
+                                />
+                                <select
+                                    id="shift-category"
+                                    v-model="shiftForm.shift_category_id"
+                                    class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                                    required
+                                >
+                                    <option
+                                        v-for="category in availableCategories"
+                                        :key="category.id"
+                                        :value="String(category.id)"
+                                    >
+                                        {{ category.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="shift-start">Start</Label>
+                                <Input
+                                    id="shift-start"
+                                    v-model="shiftForm.start_time"
+                                    type="datetime-local"
+                                    step="60"
+                                    required
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="shift-end">End</Label>
+                                <Input
+                                    id="shift-end"
+                                    v-model="shiftForm.end_time"
+                                    type="datetime-local"
+                                    step="60"
+                                    :min="shiftForm.start_time"
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <p v-if="shiftError" class="text-sm text-destructive">
+                        {{ shiftError }}
+                    </p>
+
+                    <DialogFooter class="gap-2 sm:justify-between">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <template v-if="confirmDelete">
+                                <span class="text-sm text-muted-foreground">
+                                    Delete this shift permanently?
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    :disabled="shiftDeleting"
+                                    @click="deleteShift"
+                                >
+                                    <Trash2 class="size-4" />
+                                    Confirm delete
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="confirmDelete = false"
+                                >
+                                    Cancel
+                                </Button>
+                            </template>
+                            <Button
+                                v-else
+                                type="button"
+                                variant="destructive"
+                                :disabled="shiftLoading || shiftSaving"
+                                @click="confirmDelete = true"
+                            >
+                                <Trash2 class="size-4" />
+                                Delete shift
+                            </Button>
+                        </div>
+
+                        <div v-if="!confirmDelete" class="flex gap-2">
+                            <DialogClose as-child>
+                                <Button type="button" variant="outline">
+                                    <X class="size-4" />
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+                            <Button
+                                type="submit"
+                                :disabled="
+                                    shiftLoading || shiftSaving || !activeShift
+                                "
+                            >
+                                <Check class="size-4" />
+                                {{ shiftSaving ? 'Saving...' : 'Save changes' }}
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </main>
 </template>

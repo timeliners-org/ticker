@@ -12,6 +12,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('shifts', [Shifts::class, 'index'])->name('shifts.index');
     Route::get('shifts/day', [Shifts::class, 'getDaily'])->name('shifts.daily');
+    Route::get('shifts/detail', [Shifts::class, 'getShift'])->name('shifts.getShift');
+    Route::put('shifts/update', [Shifts::class, 'updateShift'])->name('shifts.updateShift');
+    Route::delete('shifts/delete', [Shifts::class, 'deleteShift'])->name('shifts.deleteShift');
 
     Route::get('teams', [Teams::class, 'index'])->name('teams.index');
     Route::post('teams', [Teams::class, 'create'])->name('teams.create');

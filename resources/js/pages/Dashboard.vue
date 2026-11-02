@@ -112,7 +112,10 @@ const todayWorkingTimeDisplay = computed(() => {
     return formatHours(workTime / 3600);
 });
 const formatDay = (tick: number | Date) => {
-    const row = chartData.value[Math.round(Number(tick))];
+    const index = Number(tick);
+    if (!Number.isInteger(index)) return '';
+
+    const row = chartData.value[index];
     return row ? String(row.date) : '';
 };
 
