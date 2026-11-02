@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Dashboard;
+use App\Http\Controllers\Shifts;
 use App\Http\Controllers\Teams;
 use Illuminate\Support\Facades\Route;
 
@@ -8,6 +9,9 @@ Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', [Dashboard::class, 'index'])->name('dashboard');
+
+    Route::get('shifts', [Shifts::class, 'index'])->name('shifts.index');
+    Route::get('shifts/day', [Shifts::class, 'getDaily'])->name('shifts.daily');
 
     Route::get('teams', [Teams::class, 'index'])->name('teams.index');
     Route::post('teams', [Teams::class, 'create'])->name('teams.create');

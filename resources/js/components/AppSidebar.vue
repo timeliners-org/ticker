@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, UsersRound } from '@lucide/vue';
+import { CalendarDays, LayoutGrid, UsersRound } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -19,12 +19,18 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import { computed } from 'vue';
 import teams from '@/routes/teams';
+import shifts from '@/routes/shifts';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Shifts',
+        href: shifts.index(),
+        icon: CalendarDays,
     },
     {
         title: 'Teams',
