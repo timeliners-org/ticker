@@ -96,11 +96,15 @@ const todayWorkingTimeDisplay = computed(() => {
     let workTime = props.todayWorkingTime;
     const status = page.props.timer.status;
     // Add the currently running shift, which is not stored as finished yet
-    if (status?.startedAt && !status.pausedAt) {
+    if (status?.startedAt) {
         workTime += Math.max(
             0,
             Math.floor(
-                (now.value - new Date(status.startedAt).getTime()) / 1000,
+                ((status.pausedAt
+                    ? new Date(status.pausedAt).getTime()
+                    : now.value) -
+                    new Date(status.startedAt).getTime()) /
+                    1000,
             ),
         );
     }
@@ -108,7 +112,10 @@ const todayWorkingTimeDisplay = computed(() => {
     return formatHours(workTime / 3600);
 });
 const formatDay = (tick: number | Date) => {
-    const row = chartData.value[Math.round(Number(tick))];
+    const index = Number(tick);
+    if (!Number.isInteger(index)) return '';
+
+    const row = chartData.value[index];
     return row ? String(row.date) : '';
 };
 

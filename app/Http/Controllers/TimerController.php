@@ -6,6 +6,7 @@ use App\Models\ShiftCategory;
 use App\Services\TimerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
 
 class TimerController extends Controller
 {
