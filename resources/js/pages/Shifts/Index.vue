@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from "@inertiajs/vue3";
 import {
     CalendarDays,
     Check,
@@ -8,9 +8,9 @@ import {
     Clock3,
     Trash2,
     X,
-} from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
-import { Button } from '@/components/ui/button';
+} from "@lucide/vue";
+import { computed, reactive, ref, watch } from "vue";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogClose,
@@ -19,10 +19,10 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import type { ShiftCategory } from '@/types/timer';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { ShiftCategory } from "@/types/timer";
 
 type Shift = {
     id: number;
@@ -44,8 +44,8 @@ const page = usePage();
 
 function dateKey(date: Date): string {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
 }
@@ -62,18 +62,18 @@ const selectedDate = ref(
 const visibleMonth = ref(parseDate(selectedDate.value));
 const shifts = ref<Shift[]>([]);
 const isLoading = ref(false);
-const loadError = ref('');
+const loadError = ref("");
 const shiftDialogOpen = ref(false);
 const shiftLoading = ref(false);
 const shiftSaving = ref(false);
 const shiftDeleting = ref(false);
 const confirmDelete = ref(false);
-const shiftError = ref('');
+const shiftError = ref("");
 const activeShift = ref<Shift | null>(null);
 const shiftForm = reactive({
-    start_time: '',
-    end_time: '',
-    shift_category_id: '',
+    start_time: "",
+    end_time: "",
+    shift_category_id: "",
 });
 
 const availableCategories = computed<ShiftCategory[]>(() => {
@@ -100,11 +100,11 @@ const availableCategories = computed<ShiftCategory[]>(() => {
 const availableDates = computed(() => new Set(props.datesWithShifts));
 const monthLabel = computed(() =>
     new Intl.DateTimeFormat(undefined, {
-        month: 'long',
-        year: 'numeric',
+        month: "long",
+        year: "numeric",
     }).format(visibleMonth.value),
 );
-const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const calendarDays = computed(() => {
     const year = visibleMonth.value.getFullYear();
     const month = visibleMonth.value.getMonth();
@@ -121,10 +121,10 @@ const calendarDays = computed(() => {
 
 const formattedSelectedDate = computed(() =>
     new Intl.DateTimeFormat(undefined, {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
     }).format(parseDate(selectedDate.value)),
 );
 
@@ -138,28 +138,28 @@ function changeMonth(offset: number) {
 
 async function loadDay(date: string, signal?: AbortSignal) {
     isLoading.value = true;
-    loadError.value = '';
+    loadError.value = "";
 
     try {
         const response = await fetch(
             `/shifts/day?date=${encodeURIComponent(date)}`,
             {
-                headers: { Accept: 'application/json' },
+                headers: { Accept: "application/json" },
                 signal,
             },
         );
 
         if (!response.ok) {
-            throw new Error('Unable to load shifts for this date.');
+            throw new Error("Unable to load shifts for this date.");
         }
 
         shifts.value = await response.json();
     } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
+        if (error instanceof DOMException && error.name === "AbortError") {
             return;
         }
 
-        loadError.value = 'Unable to load shifts for this date.';
+        loadError.value = "Unable to load shifts for this date.";
         shifts.value = [];
     } finally {
         isLoading.value = false;
@@ -221,51 +221,55 @@ const groupedShifts = computed(() => {
 });
 
 function formatTime(value: string | null): string {
-    if (!value) return 'In progress';
+    if (!value) return "In progress";
 
     return new Intl.DateTimeFormat(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
+        hour: "2-digit",
+        minute: "2-digit",
     }).format(new Date(value));
 }
 
 function toLocalDateTime(value: string | null): string {
-    if (!value) return '';
+    if (!value) return "";
 
     const date = new Date(value);
-    const pad = (part: number) => String(part).padStart(2, '0');
+    const pad = (part: number) => String(part).padStart(2, "0");
 
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function toUtcDateTime(value: string): string {
+    return new Date(value).toISOString().slice(0, 19).replace("T", " ");
+}
+
 function xsrfToken(): string {
     const token = document.cookie
-        .split('; ')
-        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
-        ?.slice('XSRF-TOKEN='.length);
+        .split("; ")
+        .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
+        ?.slice("XSRF-TOKEN=".length);
 
-    return token ? decodeURIComponent(token) : '';
+    return token ? decodeURIComponent(token) : "";
 }
 
 async function shiftRequest<T>(
     url: string,
-    method: 'GET' | 'PUT' | 'DELETE',
+    method: "GET" | "PUT" | "DELETE",
     data?: Record<string, string | number | null>,
 ): Promise<T> {
     const response = await fetch(url, {
         method,
-        credentials: 'same-origin',
+        credentials: "same-origin",
         headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            'X-XSRF-TOKEN': xsrfToken(),
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-XSRF-TOKEN": xsrfToken(),
         },
         ...(data ? { body: JSON.stringify(data) } : {}),
     });
     const result = await response.json().catch(() => null);
 
     if (!response.ok) {
-        throw new Error(result?.message ?? 'The shift could not be saved.');
+        throw new Error(result?.message ?? "The shift could not be saved.");
     }
 
     return result as T;
@@ -274,14 +278,14 @@ async function shiftRequest<T>(
 async function openShift(shift: Shift) {
     shiftDialogOpen.value = true;
     shiftLoading.value = true;
-    shiftError.value = '';
+    shiftError.value = "";
     confirmDelete.value = false;
     activeShift.value = null;
 
     try {
         activeShift.value = await shiftRequest<Shift>(
             `/shifts/detail?id=${shift.id}`,
-            'GET',
+            "GET",
         );
         shiftForm.start_time = toLocalDateTime(activeShift.value.start_time);
         shiftForm.end_time = toLocalDateTime(activeShift.value.end_time);
@@ -290,7 +294,7 @@ async function openShift(shift: Shift) {
         );
     } catch (error) {
         shiftError.value =
-            error instanceof Error ? error.message : 'Unable to load shift.';
+            error instanceof Error ? error.message : "Unable to load shift.";
     } finally {
         shiftLoading.value = false;
     }
@@ -300,18 +304,16 @@ async function saveShift() {
     if (!activeShift.value) return;
 
     shiftSaving.value = true;
-    shiftError.value = '';
+    shiftError.value = "";
 
     try {
         const updatedShift = await shiftRequest<Shift>(
-            '/shifts/update',
-            'PUT',
+            "/shifts/update",
+            "PUT",
             {
                 id: activeShift.value.id,
-                start_time: `${shiftForm.start_time.replace('T', ' ')}:00`,
-                end_time: shiftForm.end_time
-                    ? `${shiftForm.end_time.replace('T', ' ')}:00`
-                    : null,
+                start_time: toUtcDateTime(shiftForm.start_time),
+                end_time: toUtcDateTime(shiftForm.end_time),
                 shift_category_id: Number(shiftForm.shift_category_id),
             },
         );
@@ -323,10 +325,10 @@ async function saveShift() {
         } else {
             await loadDay(updatedDate);
         }
-        router.reload({ only: ['datesWithShifts'] });
+        router.reload({ only: ["datesWithShifts"] });
     } catch (error) {
         shiftError.value =
-            error instanceof Error ? error.message : 'Unable to save shift.';
+            error instanceof Error ? error.message : "Unable to save shift.";
     } finally {
         shiftSaving.value = false;
     }
@@ -336,19 +338,19 @@ async function deleteShift() {
     if (!activeShift.value) return;
 
     shiftDeleting.value = true;
-    shiftError.value = '';
+    shiftError.value = "";
 
     try {
-        await shiftRequest<{ deleted: boolean }>('/shifts/delete', 'DELETE', {
+        await shiftRequest<{ deleted: boolean }>("/shifts/delete", "DELETE", {
             id: activeShift.value.id,
         });
         shiftDialogOpen.value = false;
         confirmDelete.value = false;
         await loadDay(selectedDate.value);
-        router.reload({ only: ['datesWithShifts'] });
+        router.reload({ only: ["datesWithShifts"] });
     } catch (error) {
         shiftError.value =
-            error instanceof Error ? error.message : 'Unable to delete shift.';
+            error instanceof Error ? error.message : "Unable to delete shift.";
     } finally {
         shiftDeleting.value = false;
     }
@@ -356,7 +358,7 @@ async function deleteShift() {
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Shifts', href: '/shifts' }],
+        breadcrumbs: [{ title: "Shifts", href: "/shifts" }],
     },
 });
 </script>
@@ -468,7 +470,7 @@ defineOptions({
                     </div>
                     <p class="text-sm text-muted-foreground">
                         {{ shifts.length }}
-                        {{ shifts.length === 1 ? 'shift' : 'shifts' }}
+                        {{ shifts.length === 1 ? "shift" : "shifts" }}
                     </p>
                 </div>
 
@@ -662,7 +664,7 @@ defineOptions({
                                 "
                             >
                                 <Check class="size-4" />
-                                {{ shiftSaving ? 'Saving...' : 'Save changes' }}
+                                {{ shiftSaving ? "Saving..." : "Save changes" }}
                             </Button>
                         </div>
                     </DialogFooter>
