@@ -305,11 +305,11 @@ defineOptions({
                         <article
                             v-for="shift in group"
                             :key="shift.id"
-                            class="border-l-[3px] py-1 pl-4"
+                            class="border-l-[3px] py-1 pl-4 bg-black/20 hover:bg-gray-800"
                             :style="{ borderColor: shift.category.color }"
                         >
                             <div
-                                class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+                                class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 "
                             >
                                 <h3 class="font-medium">
                                     {{ shift.category.name }}

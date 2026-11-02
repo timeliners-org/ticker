@@ -96,11 +96,15 @@ const todayWorkingTimeDisplay = computed(() => {
     let workTime = props.todayWorkingTime;
     const status = page.props.timer.status;
     // Add the currently running shift, which is not stored as finished yet
-    if (status?.startedAt && !status.pausedAt) {
+    if (status?.startedAt) {
         workTime += Math.max(
             0,
             Math.floor(
-                (now.value - new Date(status.startedAt).getTime()) / 1000,
+                ((status.pausedAt
+                    ? new Date(status.pausedAt).getTime()
+                    : now.value) -
+                    new Date(status.startedAt).getTime()) /
+                    1000,
             ),
         );
     }
