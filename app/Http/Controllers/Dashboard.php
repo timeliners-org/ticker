@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Quota;
 use App\Models\Shift;
 use App\Models\User;
+use DB;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -57,9 +59,31 @@ class Dashboard extends Controller
                 0.0,
             );
 
+        $quotas = Quota::query()
+            ->where('user_id', $user->id)
+            ->get();
+
+        $workView = DB::table('work_view')
+            ->where('user_id', $user->id)
+            ->groupBy('date')
+            ->get([
+                'date',
+                DB::raw('SUM(total_shift_seconds) as total_shift_seconds'),
+            ]);
+
+        $overtime = 0;
+
+        foreach ($quotas as $quota) {
+            $workForQuotaDate = $workView->firstWhere('date', $quota->date->format('Y-m-d'));
+            if ($workForQuotaDate) {
+                $overtime += (int) $workForQuotaDate->total_shift_seconds - (int) $quota->quota;
+            }
+        }
+
         return Inertia::render('Dashboard', [
             'shifts' => $shifts,
             'todayWorkingTime' => $todayWorkingTime, // Provided in seconds
+            'overtime' => $overtime, // Provided in seconds
         ]);
     }
 }

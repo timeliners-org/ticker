@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Dashboard;
+use App\Http\Controllers\Quotas;
 use App\Http\Controllers\Shifts;
 use App\Http\Controllers\Teams;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('shifts/detail', [Shifts::class, 'getShift'])->name('shifts.getShift');
     Route::put('shifts/update', [Shifts::class, 'updateShift'])->name('shifts.updateShift');
     Route::delete('shifts/delete', [Shifts::class, 'deleteShift'])->name('shifts.deleteShift');
+
+    Route::get('quotas/day', [Quotas::class, 'getDaily'])->name('quotas.daily');
+    Route::post('quotas', [Quotas::class, 'create'])->name('quotas.create');
+    Route::put('quotas/{id}', [Quotas::class, 'update'])->name('quotas.update');
+    Route::delete('quotas/{id}', [Quotas::class, 'delete'])->name('quotas.delete');
 
     Route::get('teams', [Teams::class, 'index'])->name('teams.index');
     Route::post('teams', [Teams::class, 'create'])->name('teams.create');

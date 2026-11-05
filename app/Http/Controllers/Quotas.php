@@ -3,21 +3,37 @@
 namespace App\Http\Controllers;
 
 use App\Models\Quota;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Inertia\Controller;
+use Illuminate\Routing\Controller;
 
 class Quotas extends Controller
 {
-    public function getAll(Request $request)
+    public function getDaily(Request $request): JsonResponse
     {
         $user = auth()->user();
 
-        $quotas = $user->quotas()->get();
+        $validated = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+        ]);
+
+        $quota = Quota::where('user_id', $user->id)
+            ->where('date', $validated['date'])
+            ->firstOrFail(['id', 'quota', 'date']);
+
+        return response()->json($quota);
+    }
+
+    public function getAll(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+
+        $quotas = $user->quotas()->get(['date', 'quota']);
 
         return response()->json(['success' => true, 'quotas' => $quotas]);
     }
 
-    public function create(Request $request)
+    public function create(Request $request): JsonResponse
     {
         $user = auth()->user();
 
@@ -30,7 +46,7 @@ class Quotas extends Controller
             return response()->json(['error' => 'Quota cannot exceed 24 hours or be negative'], 422);
         }
 
-        if (Quota::where('user_id', $user->id)->where('date', $validated['date'])->exists()) {
+        if (Quota::where('user_id', $user->id)->whereDate('date', $validated['date'])->exists()) {
             return response()->json(['error' => 'Quota for this date already exists'], 422);
         }
 
@@ -42,7 +58,7 @@ class Quotas extends Controller
         return response()->json(['success' => true, 'quota' => $quota], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id): JsonResponse
     {
         $user = auth()->user();
 
@@ -55,7 +71,7 @@ class Quotas extends Controller
             return response()->json(['error' => 'Quota cannot exceed 24 hours or be negative'], 422);
         }
 
-        if (Quota::where('user_id', $user->id)->where('date', $validated['date'])->where('id', '!=', $id)->exists()) {
+        if (Quota::where('user_id', $user->id)->whereDate('date', $validated['date'])->where('id', '!=', $id)->exists()) {
             return response()->json(['error' => 'Quota for this date already exists'], 422);
         }
 
@@ -69,7 +85,7 @@ class Quotas extends Controller
         return response()->json(['success' => true, 'quota' => $quota], 200);
     }
 
-    public function delete(Request $request, $id)
+    public function delete(Request $request, int $id): JsonResponse
     {
         $user = auth()->user();
 

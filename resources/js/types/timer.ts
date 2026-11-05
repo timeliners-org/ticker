@@ -12,6 +12,12 @@ export type ShiftCategory = {
     color: string;
 };
 
+export type TodayQuota = {
+    id: number;
+    date: string;
+    quota: number;
+};
+
 export type Timer = {
     status: TimerStatus | null;
     categories: ShiftCategory[];

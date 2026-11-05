@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\InvalidStateException;
 
 $redirectToIdentityProvider = fn () => Inertia::location(
     Socialite::driver('oidc_timeliners')->redirect(),
@@ -14,7 +15,11 @@ Route::get('/login', $redirectToIdentityProvider)->name('login');
 Route::get('/auth/redirect', $redirectToIdentityProvider)->name('auth.redirect');
 
 Route::get('/auth/callback', function () {
-    $oidcUser = Socialite::driver('oidc_timeliners')->user();
+    try {
+        $oidcUser = Socialite::driver('oidc_timeliners')->user();
+    } catch (InvalidArgumentException|InvalidStateException) {
+        return redirect()->route('auth.redirect');
+    }
 
     $name = $oidcUser->getName();
     $email = $oidcUser->getEmail();

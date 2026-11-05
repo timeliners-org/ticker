@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
-import { Check, Pause, Play, Square } from '@lucide/vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { Check, Pause, Play, Plus, Square, Target } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,7 @@ import {
 import { pause, start, stop, unpause, update } from '@/routes/timer';
 import type { Timer } from '@/types/timer';
 import TimerReaction from '@/components/TimerReaction.vue';
+import QuotaDialog from '@/components/QuotaDialog.vue';
 
 const props = defineProps<{
     timer: Timer;
@@ -20,6 +21,18 @@ const props = defineProps<{
 }>();
 
 const size = props.size ?? 'compact';
+
+const page = usePage();
+const quota = computed(() => page.props.quota);
+const quotaDialogOpen = ref(false);
+
+const quotaDisplay = computed(() => {
+    const total = quota.value?.quota ?? 0;
+    const hh = String(Math.floor(total / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+
+    return `${hh}:${mm}`;
+});
 
 const status = computed(() => props.timer.status);
 const isActive = computed(() => status.value !== null);
@@ -156,6 +169,28 @@ const selectedValue = computed({
 
 <template>
     <div v-if="size === 'full'" class="grid w-full grid-cols-1 gap-4">
+        <div class="flex items-center justify-between gap-2 px-1 text-base">
+            <span class="flex items-center gap-1.5 text-muted-foreground">
+                <Target class="size-4" />
+                Today's quota
+            </span>
+            <span v-if="quota" class="font-mono tabular-nums">
+                {{ quotaDisplay }} h
+            </span>
+            <Button
+                v-else
+                variant="outline"
+                class="h-10 gap-2"
+                @click="quotaDialogOpen = true"
+            >
+                <Plus class="size-4" />
+                Set quota
+            </Button>
+        </div>
+        <QuotaDialog v-model:open="quotaDialogOpen" />
+
+        <div class="h-px bg-sidebar-border/70 dark:bg-sidebar-border" />
+
         <div
             class="flex items-center justify-between gap-2 px-1 py-1 text-base text-muted-foreground"
         >
@@ -259,6 +294,29 @@ const selectedValue = computed({
         v-else
         class="grid w-full grid-cols-1 gap-1 rounded-xl border border-sidebar-border/70 p-2 dark:border-sidebar-border"
     >
+        <div class="flex items-center justify-between gap-2 px-1 text-xs">
+            <span class="flex items-center gap-1.5 text-muted-foreground">
+                <Target class="size-3.5" />
+                Today's quota
+            </span>
+            <span v-if="quota" class="font-mono tabular-nums">
+                {{ quotaDisplay }} h
+            </span>
+            <Button
+                v-else
+                variant="outline"
+                size="sm"
+                class="h-6 gap-1 px-2 text-xs"
+                @click="quotaDialogOpen = true"
+            >
+                <Plus class="size-3" />
+                Set quota
+            </Button>
+        </div>
+        <QuotaDialog v-model:open="quotaDialogOpen" />
+
+        <div class="h-px bg-sidebar-border/70 dark:bg-sidebar-border" />
+
         <div
             class="flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground"
         >

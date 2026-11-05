@@ -2,7 +2,7 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { dashboard } from '@/routes';
-import { Clock } from '@lucide/vue';
+import { Clock, TrendingUp } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -20,6 +20,7 @@ import type { DashboardShifts } from '@/types';
 const props = defineProps<{
     shifts: DashboardShifts;
     todayWorkingTime: number;
+    overtime: number;
 }>();
 
 const page = usePage();
@@ -92,24 +93,41 @@ onMounted(() => {
 });
 onUnmounted(() => clearInterval(clockInterval));
 
-const todayWorkingTimeDisplay = computed(() => {
-    let workTime = props.todayWorkingTime;
+const runningSeconds = computed(() => {
     const status = page.props.timer.status;
-    // Add the currently running shift, which is not stored as finished yet
-    if (status?.startedAt) {
-        workTime += Math.max(
-            0,
-            Math.floor(
-                ((status.pausedAt
-                    ? new Date(status.pausedAt).getTime()
-                    : now.value) -
-                    new Date(status.startedAt).getTime()) /
-                    1000,
-            ),
-        );
-    }
+    // The currently running shift is not stored as finished yet
+    if (!status?.startedAt) return 0;
 
-    return formatHours(workTime / 3600);
+    return Math.max(
+        0,
+        Math.floor(
+            ((status.pausedAt
+                ? new Date(status.pausedAt).getTime()
+                : now.value) -
+                new Date(status.startedAt).getTime()) /
+                1000,
+        ),
+    );
+});
+
+const todayWorkingTimeDisplay = computed(() =>
+    formatHours((props.todayWorkingTime + runningSeconds.value) / 3600),
+);
+
+const liveOvertime = computed(() => {
+    const quota = page.props.quota;
+    // Without a quota for today the running timer does not count towards overtime
+    if (!quota || runningSeconds.value === 0) return props.overtime;
+
+    // The backend only deducts today's quota once finished work exists
+    const quotaDeduction = props.todayWorkingTime === 0 ? quota.quota : 0;
+
+    return props.overtime + runningSeconds.value - quotaDeduction;
+});
+const overtimeDisplay = computed(() => {
+    const sign = liveOvertime.value < 0 ? '-' : '+';
+
+    return `${sign}${formatHours(Math.abs(liveOvertime.value) / 3600)}`;
 });
 const formatDay = (tick: number | Date) => {
     const index = Number(tick);
@@ -165,9 +183,29 @@ defineOptions({
                 </div>
             </div>
             <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 bg-gradient-to-br from-card to-muted/40 dark:border-sidebar-border"
             >
-                <PlaceholderPattern />
+                <div
+                    class="relative flex h-full flex-col items-center justify-center gap-2"
+                >
+                    <div
+                        class="flex items-center gap-2 text-sm font-medium tracking-wide text-muted-foreground uppercase"
+                    >
+                        <TrendingUp class="size-4" />
+                        Overtime
+                    </div>
+                    <span
+                        class="text-7xl font-bold tracking-tight tabular-nums"
+                        :class="
+                            liveOvertime < 0
+                                ? 'text-red-500'
+                                : 'text-emerald-500'
+                        "
+                    >
+                        {{ overtimeDisplay }}
+                    </span>
+                    <span class="text-xs text-muted-foreground">hours</span>
+                </div>
             </div>
             <div
                 class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"

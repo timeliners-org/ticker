@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Quota;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,9 +19,9 @@ class QuotaFactory extends Factory
     public function definition(): array
     {
         return [
-            "date"=> $this->faker->date(),
-            "quota"=> $this->faker->numberBetween(1,24*60*60),
-            "user_id"=> \App\Models\User::factory(),
+            'date' => $this->faker->date(),
+            'quota' => $this->faker->numberBetween(1, 24 * 60 * 60),
+            'user_id' => User::factory(),
         ];
     }
 }
