@@ -53,6 +53,7 @@ class HandleInertiaRequests extends Middleware
                 'status' => $user ? TimerService::getUserStatus($user) : null,
                 'categories' => $user ? ShiftCategory::whereIn('owner_id', $user->teams()->select('teams.id'))->get(['id', 'name', 'color']) : [],
             ],
+            'quota' => $user ? $user->quotas()->where('date', now()->toDateString())->first(['id', 'date', 'quota']) : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

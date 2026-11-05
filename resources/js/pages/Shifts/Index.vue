@@ -253,7 +253,7 @@ function xsrfToken(): string {
 
 async function shiftRequest<T>(
     url: string,
-    method: 'GET' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     data?: Record<string, string | number | null>,
 ): Promise<T> {
     const response = await fetch(url, {
@@ -269,11 +269,113 @@ async function shiftRequest<T>(
     const result = await response.json().catch(() => null);
 
     if (!response.ok) {
-        throw new Error(result?.message ?? 'The shift could not be saved.');
+        throw new Error(
+            result?.message ?? result?.error ?? 'The request failed.',
+        );
     }
 
     return result as T;
 }
+
+type DayQuota = { id: number; date: string; quota: number };
+
+const dayQuota = ref<DayQuota | null>(null);
+const quotaEditing = ref(false);
+const quotaSaving = ref(false);
+const quotaError = ref('');
+const quotaInput = ref('08:00');
+
+function formatQuota(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+async function loadQuota(date: string) {
+    quotaEditing.value = false;
+    quotaError.value = '';
+
+    try {
+        const response = await fetch(
+            `/quotas/day?date=${encodeURIComponent(date)}`,
+            { headers: { Accept: 'application/json' } },
+        );
+
+        if (response.status !== 404 && !response.ok) {
+            throw new Error('Unable to load quota.');
+        }
+
+        const result: DayQuota | null = response.ok
+            ? await response.json()
+            : null;
+        if (date === selectedDate.value) dayQuota.value = result;
+    } catch (error) {
+        dayQuota.value = null;
+        quotaError.value =
+            error instanceof Error ? error.message : 'Unable to load quota.';
+    }
+}
+
+function startQuotaEdit() {
+    quotaInput.value = dayQuota.value
+        ? formatQuota(dayQuota.value.quota)
+        : '08:00';
+    quotaError.value = '';
+    quotaEditing.value = true;
+}
+
+async function saveQuota() {
+    const [hours, minutes] = quotaInput.value.split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+
+    quotaSaving.value = true;
+    quotaError.value = '';
+
+    try {
+        const payload = {
+            date: selectedDate.value,
+            quota: hours * 3600 + minutes * 60,
+        };
+        if (dayQuota.value) {
+            await shiftRequest(`/quotas/${dayQuota.value.id}`, 'PUT', payload);
+        } else {
+            await shiftRequest('/quotas', 'POST', payload);
+        }
+        await loadQuota(selectedDate.value);
+    } catch (error) {
+        quotaError.value =
+            error instanceof Error ? error.message : 'Unable to save quota.';
+    } finally {
+        quotaSaving.value = false;
+    }
+}
+
+async function deleteQuota() {
+    if (!dayQuota.value) return;
+
+    quotaSaving.value = true;
+    quotaError.value = '';
+
+    try {
+        await shiftRequest(`/quotas/${dayQuota.value.id}`, 'DELETE');
+        dayQuota.value = null;
+    } catch (error) {
+        quotaError.value =
+            error instanceof Error ? error.message : 'Unable to delete quota.';
+    } finally {
+        quotaSaving.value = false;
+    }
+}
+
+watch(
+    selectedDate,
+    (date) => {
+        dayQuota.value = null;
+        void loadQuota(date);
+    },
+    { immediate: true },
+);
 
 async function openShift(shift: Shift) {
     shiftDialogOpen.value = true;
@@ -471,6 +573,81 @@ defineOptions({
                     <p class="text-sm text-muted-foreground">
                         {{ shifts.length }}
                         {{ shifts.length === 1 ? 'shift' : 'shifts' }}
+                    </p>
+                </div>
+
+                <div class="mb-6 space-y-2 border-y py-3">
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3"
+                    >
+                        <div class="text-sm">
+                            <span class="text-muted-foreground"
+                                >Daily quota</span
+                            >
+                            <span class="ml-2 font-medium tabular-nums">
+                                {{
+                                    dayQuota
+                                        ? `${formatQuota(dayQuota.quota)} h`
+                                        : 'Not set'
+                                }}
+                            </span>
+                        </div>
+
+                        <form
+                            v-if="quotaEditing"
+                            class="flex items-center gap-2"
+                            @submit.prevent="saveQuota"
+                        >
+                            <Input
+                                v-model="quotaInput"
+                                type="time"
+                                class="w-28"
+                                aria-label="Quota (hours:minutes)"
+                                required
+                            />
+                            <Button
+                                type="submit"
+                                size="sm"
+                                :disabled="quotaSaving"
+                            >
+                                <Check class="size-4" />
+                                Save
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                @click="quotaEditing = false"
+                            >
+                                <X class="size-4" />
+                                Cancel
+                            </Button>
+                        </form>
+                        <div v-else class="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                :disabled="quotaSaving"
+                                @click="startQuotaEdit"
+                            >
+                                {{ dayQuota ? 'Edit' : 'Set quota' }}
+                            </Button>
+                            <Button
+                                v-if="dayQuota"
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                :disabled="quotaSaving"
+                                @click="deleteQuota"
+                            >
+                                <Trash2 class="size-4" />
+                                Delete
+                            </Button>
+                        </div>
+                    </div>
+                    <p v-if="quotaError" class="text-sm text-destructive">
+                        {{ quotaError }}
                     </p>
                 </div>
 

@@ -58,4 +58,10 @@ class User extends Authenticatable
 
         return $membership ? (bool) $membership->is_admin : false;
     }
+
+    /** @return HasMany<Quota, $this> */
+    public function quotas(): HasMany
+    {
+        return $this->hasMany(Quota::class, 'user_id');
+    }
 }
