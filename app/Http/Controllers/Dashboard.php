@@ -83,6 +83,9 @@ class Dashboard extends Controller
         return Inertia::render('Dashboard', [
             'shifts' => $shifts,
             'todayWorkingTime' => $todayWorkingTime, // Provided in seconds
+            'todayQuota' => $quotas
+                ->first(fn (Quota $quota): bool => $quota->date->isToday())
+                ?->quota,
             'overtime' => $overtime, // Provided in seconds
         ]);
     }

@@ -20,6 +20,7 @@ import type { DashboardShifts } from '@/types';
 const props = defineProps<{
     shifts: DashboardShifts;
     todayWorkingTime: number;
+    todayQuota: number | null;
     overtime: number;
 }>();
 
@@ -114,6 +115,21 @@ const todayWorkingTimeDisplay = computed(() =>
     formatHours((props.todayWorkingTime + runningSeconds.value) / 3600),
 );
 
+const quotaBalance = computed(() =>
+    props.todayQuota === null
+        ? null
+        : props.todayWorkingTime + runningSeconds.value - props.todayQuota,
+);
+const isUnderQuota = computed(
+    () => quotaBalance.value !== null && quotaBalance.value < 0,
+);
+const quotaBalanceDisplay = computed(() => {
+    if (quotaBalance.value === null) return null;
+
+    const sign = quotaBalance.value < 0 ? '-' : '+';
+    return `${sign}${formatHours(Math.abs(quotaBalance.value) / 3600)}`;
+});
+
 const liveOvertime = computed(() => {
     const quota = page.props.quota;
     // Without a quota for today the running timer does not count towards overtime
@@ -174,11 +190,25 @@ defineOptions({
                         <Clock class="size-4" />
                         Today's Working Time
                     </div>
-                    <span
-                        class="bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-7xl font-bold tracking-tight text-transparent tabular-nums"
-                    >
-                        {{ todayWorkingTimeDisplay }}
-                    </span>
+                    <div class="relative">
+                        <span
+                            class="bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-7xl font-bold tracking-tight text-transparent tabular-nums"
+                        >
+                            {{ todayWorkingTimeDisplay }}
+                        </span>
+                        <span
+                            v-if="quotaBalanceDisplay !== null"
+                            class="absolute top-1/2 left-full ml-3 -translate-y-1/2 text-sm font-semibold whitespace-nowrap tabular-nums sm:text-base"
+                            :class="
+                                isUnderQuota
+                                    ? 'text-red-500'
+                                    : 'text-emerald-500'
+                            "
+                            aria-label="Remaining quota"
+                        >
+                            {{ quotaBalanceDisplay }}
+                        </span>
+                    </div>
                     <span class="text-xs text-muted-foreground">hours</span>
                 </div>
             </div>
